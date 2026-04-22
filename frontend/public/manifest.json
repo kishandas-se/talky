@@ -1,0 +1,43 @@
+{
+  "name": "Talky - Video Calls & Chat",
+  "short_name": "Talky",
+  "description": "Personal video calling and chat application for staying connected",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["communication", "social"],
+  "shortcuts": [
+    {
+      "name": "Meeting Room",
+      "short_name": "Meeting",
+      "description": "Join the permanent meeting room",
+      "url": "/meeting",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Chat",
+      "short_name": "Chat",
+      "description": "Open chat messages",
+      "url": "/chat",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

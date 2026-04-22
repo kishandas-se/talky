@@ -1,0 +1,309 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-purple-50 via-white to-blue-50 text-gray-900 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+  }
+
+  html, body, #root {
+    @apply h-full;
+  }
+}
+
+@layer components {
+  /* Glass morphism card */
+  .glass-card {
+    @apply bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20;
+  }
+
+  /* Video tile animations */
+  .video-tile {
+    @apply transition-all duration-300 ease-in-out rounded-2xl overflow-hidden shadow-lg;
+  }
+
+  .video-tile:hover {
+    @apply scale-105 shadow-2xl;
+  }
+
+  /* Message bubbles */
+  .message-bubble {
+    @apply max-w-[70%] rounded-3xl px-5 py-3 break-words shadow-sm;
+    word-wrap: break-word;
+  }
+
+  .message-bubble.own {
+    @apply bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-auto;
+  }
+
+  .message-bubble.other {
+    @apply bg-white text-gray-900 mr-auto shadow-md;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:scale-105;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 focus:ring-purple-500 shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-700 hover:bg-gray-50 focus:ring-gray-300 shadow-md border border-gray-200;
+  }
+
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-600 hover:to-pink-600 focus:ring-red-500 shadow-lg;
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white shadow-sm transition-all duration-200;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-xl p-6 border border-gray-100;
+  }
+
+  /* Control button (mic, video, etc.) */
+  .control-btn {
+    @apply p-4 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg transform hover:scale-110;
+  }
+
+  .control-btn.active {
+    @apply bg-gray-700 text-white hover:bg-gray-800;
+  }
+
+  .control-btn.inactive {
+    @apply bg-gray-400 text-white hover:bg-gray-500;
+  }
+
+  .control-btn.danger {
+    @apply bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-600 hover:to-pink-600;
+  }
+
+  /* Chat item */
+  .chat-item {
+    @apply p-4 rounded-2xl hover:bg-purple-50 cursor-pointer transition-all duration-200 border border-transparent hover:border-purple-200;
+  }
+
+  .chat-item.active {
+    @apply bg-gradient-to-r from-purple-100 to-blue-100 border-purple-300;
+  }
+
+  /* Avatar */
+  .avatar {
+    @apply rounded-full object-cover ring-2 ring-white shadow-md;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full;
+  }
+
+  .badge-primary {
+    @apply bg-purple-600 text-white;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  /* Floating action button */
+  .fab {
+    @apply fixed bottom-8 right-8 p-5 rounded-full shadow-2xl bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transform hover:scale-110 transition-all duration-300;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #9333ea, #3b82f6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Pulse animation for notification */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Mobile-first responsive utilities */
+@layer utilities {
+  /* Safe area padding for mobile notches */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Touch-friendly tap targets */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent text selection on mobile */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Animation utilities */
+  .animate-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .slide-in-from-bottom {
+    animation: slideInBottom 0.3s ease-out;
+  }
+
+  .slide-in-from-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  /* Zoom animations for modals */
+  .zoom-in-95 {
+    animation: zoomIn95 0.2s ease-out;
+  }
+}
+
+@keyframes zoomIn95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile viewport fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific fixes */
+  body {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Prevent zoom on input focus (mobile) */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media screen and (max-width: 896px) and (orientation: landscape) {
+  .h-screen {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+}

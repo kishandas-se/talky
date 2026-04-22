@@ -1,0 +1,28 @@
+{
+  "name": "talky",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal video calling and chat application",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "preview:frontend": "cd frontend && npm run preview"
+  },
+  "keywords": [
+    "webrtc",
+    "video-call",
+    "chat",
+    "react",
+    "node"
+  ],
+  "author": "Kishan",
+  "license": "MIT",
+  "dependencies": {
+    "@types/multer": "^2.1.0",
+    "multer": "^2.1.1"
+  }
+}
