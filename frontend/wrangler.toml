@@ -1,21 +1,5 @@
-# Cloudflare Pages Configuration (Optional)
-# This file is optional - Cloudflare Pages can detect Vite projects automatically
-# Use this for advanced configuration if needed
-
 name = "talky"
 compatibility_date = "2024-01-01"
 
-[build]
-command = "npm run build"
-publish = "dist"
-
-# Environment variables (can also be set in Cloudflare Dashboard)
-[env.production]
-VITE_API_URL = "https://your-app-name.fly.dev"
-VITE_WS_URL = "wss://your-app-name.fly.dev"
-
-# Redirects for SPA routing (handled by _redirects file instead)
-# [[redirects]]
-# from = "/*"
-# to = "/index.html"
-# status = 200
+[assets]
+directory = "./dist"
