@@ -24,7 +24,8 @@ export async function setupPushNotifications(username: string): Promise<boolean>
       return false;
     }
 
-    const registration = await navigator.serviceWorker.register('/sw.js');
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
+    const registration = await navigator.serviceWorker.register(swUrl);
 
     const keyResp = await api.get('/push/public-key');
     const vapidPublicKey: string | undefined = keyResp.data?.publicKey;

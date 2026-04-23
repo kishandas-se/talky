@@ -3,12 +3,12 @@ const RUNTIME_CACHE = 'talky-runtime-v1';
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.svg',
-  '/icon-512.svg',
-  '/favicon.svg'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './favicon.svg'
 ];
 
 // Install event - cache static assets
@@ -111,7 +111,7 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => {
           return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || caches.match('/index.html');
+            return cachedResponse || caches.match('./index.html');
           });
         })
     );
@@ -146,8 +146,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/icon-192.svg',
-      badge: '/icon-192.svg',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
       data: payload,
       requireInteraction: true,
       renotify: true,
@@ -165,11 +165,12 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data || {};
   event.notification.close();
+  const appBasePath = new URL(self.registration.scope).pathname;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
       const client = clientsArr.find((c) => 'focus' in c);
-      const url = `/?notificationAction=${event.action || 'open'}&invitationId=${encodeURIComponent(
+      const url = `${appBasePath}?notificationAction=${event.action || 'open'}&invitationId=${encodeURIComponent(
         data.invitationId || ''
       )}`;
 

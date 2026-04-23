@@ -34,11 +34,12 @@ configure_github_pages() {
   local api_error_file
   api_error_file="${CLOUDFLARED_DIR}/gh-pages-api-error.log"
 
+  local err_msg
   if gh api "repos/${GITHUB_OWNER}/${GITHUB_REPO}/pages" >/dev/null 2>"$api_error_file"; then
+    # Pages already exists — update the source branch
     if ! gh api --method PUT "repos/${GITHUB_OWNER}/${GITHUB_REPO}/pages" \
       -f source[branch]='gh-pages' \
       -f source[path]='/' >/dev/null 2>"$api_error_file"; then
-      local err_msg
       err_msg="$(cat "$api_error_file")"
       if [[ "$err_msg" == *"does not support GitHub Pages for this repository"* ]]; then
         fail "GitHub Pages is not available for this repository on your current plan. Make the repository public, or use a plan that supports private-repo Pages."
@@ -46,15 +47,18 @@ configure_github_pages() {
       fail "Failed to update GitHub Pages source. Details: ${err_msg}"
     fi
   else
+    # Pages not yet configured — create it (409 means it already exists, treat as success)
     if ! gh api --method POST "repos/${GITHUB_OWNER}/${GITHUB_REPO}/pages" \
       -f source[branch]='gh-pages' \
       -f source[path]='/' >/dev/null 2>"$api_error_file"; then
-      local err_msg
       err_msg="$(cat "$api_error_file")"
-      if [[ "$err_msg" == *"does not support GitHub Pages for this repository"* ]]; then
+      if [[ "$err_msg" == *"already enabled"* ]] || grep -q "409" "$api_error_file" 2>/dev/null; then
+        say "GitHub Pages is already enabled — skipping create."
+      elif [[ "$err_msg" == *"does not support GitHub Pages for this repository"* ]]; then
         fail "GitHub Pages is not available for this repository on your current plan. Make the repository public, or use a plan that supports private-repo Pages."
+      else
+        fail "Failed to create GitHub Pages site. Details: ${err_msg}"
       fi
-      fail "Failed to create GitHub Pages site. Details: ${err_msg}"
     fi
   fi
 
