@@ -1,5 +1,5 @@
-const CACHE_NAME = 'talky-v1';
-const RUNTIME_CACHE = 'talky-runtime-v1';
+const CACHE_NAME = 'talky-v2';
+const RUNTIME_CACHE = 'talky-runtime-v2';
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
@@ -58,13 +58,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first strategy for static assets (JS, CSS, images, fonts)
+  // Network-first for scripts/styles so installed PWAs pick up new deploys quickly.
+  if (request.destination === 'script' || request.destination === 'style' || url.pathname.includes('/assets/')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (!response || response.status !== 200 || response.type === 'error') {
+            return response;
+          }
+
+          const responseToCache = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Cache-first strategy for images/fonts
   if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
     request.destination === 'image' ||
-    request.destination === 'font' ||
-    url.pathname.includes('/assets/')
+    request.destination === 'font'
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
