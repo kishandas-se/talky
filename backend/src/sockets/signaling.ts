@@ -19,7 +19,7 @@ interface ActiveCallInvite {
 
 interface UserPresence {
   username: string;
-  userId: number;
+  userId: string;
   socketId: string;
 }
 
@@ -33,15 +33,13 @@ const usernameToSockets = new Map<string, Set<string>>();
 // Active direct call invites
 const activeInvites = new Map<string, ActiveCallInvite>();
 
-// Guest user counter for auto-assignment
-let guestCounter = 1;
-const assignedUserIds = new Map<string, number>(); // socketId -> userId
+const assignedUserIds = new Map<string, string>(); // socketId -> userId
 
 function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-function addPresence(socketId: string, username: string, userId: number): void {
+function addPresence(socketId: string, username: string, userId: string): void {
   removePresence(socketId);
   const normalized = normalizeName(username);
   socketPresence.set(socketId, { username, userId, socketId });
@@ -69,7 +67,15 @@ function removePresence(socketId: string): void {
 }
 
 function getOnlineUsers(): UserPresence[] {
-  return Array.from(socketPresence.values());
+  const uniqueUsers = new Map<string, UserPresence>();
+
+  for (const presence of socketPresence.values()) {
+    if (!uniqueUsers.has(presence.userId)) {
+      uniqueUsers.set(presence.userId, presence);
+    }
+  }
+
+  return Array.from(uniqueUsers.values());
 }
 
 function broadcastOnlineUsers(io: Server): void {
@@ -96,23 +102,22 @@ export function setupSignaling(io: Server) {
     console.log(`User connected: ${socket.id}`);
 
     // Register a user presence for direct calling
-    socket.on('direct:register', ({ username }: { username: string }) => {
+    socket.on('direct:register', ({ username, clientUserId }: { username: string; clientUserId?: string }) => {
       try {
         if (!username || typeof username !== 'string' || !username.trim()) {
           throw new Error('Valid username is required for registration');
         }
 
-        // Assign unique userId if not already assigned
-        let userId = assignedUserIds.get(socket.id);
-        if (!userId) {
-          userId = guestCounter++;
-          assignedUserIds.set(socket.id, userId);
-        }
+        const normalizedClientUserId = typeof clientUserId === 'string' && clientUserId.trim()
+          ? clientUserId.trim()
+          : uuidv4();
 
-        addPresence(socket.id, username.trim(), userId);
-        socket.emit('direct:registered', { username: username.trim(), userId });
+        assignedUserIds.set(socket.id, normalizedClientUserId);
+
+        addPresence(socket.id, username.trim(), normalizedClientUserId);
+        socket.emit('direct:registered', { username: username.trim(), userId: normalizedClientUserId });
         broadcastOnlineUsers(io);
-        console.log(`📡 Registered: ${username.trim()} (userId: ${userId}, socketId: ${socket.id})`);
+        console.log(`📡 Registered: ${username.trim()} (userId: ${normalizedClientUserId}, socketId: ${socket.id})`);
       } catch (error) {
         console.error('❌ direct:register error:', error);
         socket.emit('call:error', {
@@ -154,7 +159,8 @@ export function setupSignaling(io: Server) {
           }
 
           // Keep socket presence in sync with caller name.
-          const callerUserId = assignedUserIds.get(socket.id) || socketPresence.get(socket.id)?.userId || 0;
+          const callerUserId = assignedUserIds.get(socket.id) || socketPresence.get(socket.id)?.userId || uuidv4();
+          assignedUserIds.set(socket.id, callerUserId);
           addPresence(socket.id, callerName, callerUserId);
 
           const inviteType: 'audio' | 'video' = callType === 'video' ? 'video' : 'audio';
@@ -344,7 +350,11 @@ export function setupSignaling(io: Server) {
         }
 
         // Sync presence for direct calling while preserving room flow.
-        const finalUserId = userId || assignedUserIds.get(socket.id) || 0;
+        const finalUserId =
+          (typeof userId === 'string' && userId.trim()) ||
+          assignedUserIds.get(socket.id) ||
+          uuidv4();
+        assignedUserIds.set(socket.id, finalUserId);
         addPresence(socket.id, username, finalUserId);
 
         console.log(`🚪 ${username} (${userId}, socket: ${socket.id}) joining room: ${roomId}`);

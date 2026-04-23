@@ -17,6 +17,8 @@ import { useDirectCallStore } from '../stores/directCallStore';
 import { useLanguageStore } from '../stores/languageStore';
 import { translations } from '../i18n/translations';
 import { translateEnglishToBengali } from '../services/translator';
+import { appendUniqueMessage, dedupeMessages } from '../utils/chatMessages';
+import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
 
 // Default chat room for everyone
 const DEFAULT_ROOM_ID = 'talky-general';
@@ -42,15 +44,9 @@ export default function Chat() {
   const guestName = currentUsername || t.guest;
   
   const [guestId] = useState(() => {
-    const existingId = localStorage.getItem('talky_guestId');
-    if (existingId) {
-      console.log('📌 Using existing guestId:', existingId);
-      return parseInt(existingId);
-    }
-    const newId = Date.now();
-    localStorage.setItem('talky_guestId', newId.toString());
-    console.log('🆕 Created new guestId:', newId);
-    return newId;
+    const existingId = getOrCreateUserId();
+    console.log('📌 Using persistent guestId:', existingId);
+    return existingId;
   });
 
   // Auto-scroll to bottom when messages change
@@ -125,9 +121,9 @@ export default function Chat() {
         const usernameMatches = normalizedMsgUsername === normalizedGuestName;
         
         // Secondary check: userId match with type coercion
-        const msgUserId = Number(msg.user_id);
-        const currentUserId = Number(guestId);
-        const userIdMatches = !isNaN(msgUserId) && !isNaN(currentUserId) && msgUserId === currentUserId;
+        const msgUserId = normalizeUserId(msg.user_id);
+        const currentUserId = normalizeUserId(guestId);
+        const userIdMatches = msgUserId !== '' && msgUserId === currentUserId;
         
         // A message is "own" if either username or userId matches
         const isOwn = usernameMatches || userIdMatches;
@@ -155,7 +151,7 @@ export default function Chat() {
           isOwn
         };
       });
-      setMessages(formattedMessages);
+      setMessages(dedupeMessages(formattedMessages));
     };
 
     const handleMessage = (message: any) => {
@@ -171,9 +167,9 @@ export default function Chat() {
       const usernameMatches = normalizedMsgUsername === normalizedGuestName;
       
       // Secondary check: userId match with type coercion
-      const msgUserId = Number(message.userId);
-      const currentUserId = Number(guestId);
-      const userIdMatches = !isNaN(msgUserId) && !isNaN(currentUserId) && msgUserId === currentUserId;
+      const msgUserId = normalizeUserId(message.userId);
+      const currentUserId = normalizeUserId(guestId);
+      const userIdMatches = msgUserId !== '' && msgUserId === currentUserId;
       
       // A message is "own" if either username or userId matches
       const isOwn = usernameMatches || userIdMatches;
@@ -203,7 +199,7 @@ export default function Chat() {
         readBy: message.readBy || [],
         isOwn
       };
-      setMessages(prev => [...prev, newMsg]);
+      setMessages(prev => appendUniqueMessage(prev, newMsg));
     };
 
     const handleStatus = ({ messageId, status }: any) => {

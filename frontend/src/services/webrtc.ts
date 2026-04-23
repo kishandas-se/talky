@@ -92,6 +92,7 @@ export class WebRTCService {
   private localStream: MediaStream | null = null;
   private socket: Socket | null = null;
   private roomId: string | null = null;
+  private activeNegotiations: Set<string> = new Set();
   private connectionQuality: ConnectionQuality = 'excellent';
   private reconnectAttempts: Map<string, number> = new Map();
   private maxReconnectAttempts = 5;
@@ -364,27 +365,35 @@ export class WebRTCService {
     // Handle negotiation needed (e.g., when tracks are added dynamically)
     peerConnection.onnegotiationneeded = async () => {
       try {
+        if (!this.initialConnectionsComplete.has(targetSocketId)) {
+          console.log('⏸️ Skipping initial renegotiation for:', targetSocketId);
+          return;
+        }
+
         console.log('🔄 Renegotiation needed for:', targetSocketId);
-        // Only create offer if we're in stable state and not already negotiating
-        if (peerConnection.signalingState === 'stable') {
-          const offer = await peerConnection.createOffer();
-          // Do NOT optimize SDP during renegotiation - only on initial connection
-          // This prevents m-line order changes that cause errors
-          await peerConnection.setLocalDescription(offer);
-          
-          if (this.socket) {
-            this.socket.emit('webrtc-offer', {
-              roomId: this.roomId,
-              offer,
-              targetSocketId,
-            });
-            console.log('✅ Sent renegotiation offer to:', targetSocketId);
-          }
-        } else {
+        if (peerConnection.signalingState !== 'stable' || this.activeNegotiations.has(targetSocketId)) {
           console.log(`⏸️ Skipping renegotiation - peer in state: ${peerConnection.signalingState}`);
+          return;
+        }
+
+        this.activeNegotiations.add(targetSocketId);
+        const offer = await peerConnection.createOffer();
+        // Do NOT optimize SDP during renegotiation - only on initial connection
+        // This prevents m-line order changes that cause errors
+        await peerConnection.setLocalDescription(offer);
+        
+        if (this.socket) {
+          this.socket.emit('webrtc-offer', {
+            roomId: this.roomId,
+            offer,
+            targetSocketId,
+          });
+          console.log('✅ Sent renegotiation offer to:', targetSocketId);
         }
       } catch (error) {
         console.error('Error during renegotiation:', error);
+      } finally {
+        this.activeNegotiations.delete(targetSocketId);
       }
     };
 
@@ -393,9 +402,26 @@ export class WebRTCService {
   }
 
   async createOffer(targetSocketId: string, onRemoteStream?: (stream: MediaStream) => void): Promise<void> {
-    const peerConnection = this.createPeerConnection(targetSocketId, onRemoteStream);
+    if (this.activeNegotiations.has(targetSocketId)) {
+      console.log('⏸️ Offer already in progress for:', targetSocketId);
+      return;
+    }
+
+    let peerConnection = this.peerConnections.get(targetSocketId);
+
+    if (peerConnection && (peerConnection.connectionState === 'closed' || peerConnection.signalingState !== 'stable')) {
+      console.log('🔁 Replacing existing peer before creating offer for:', targetSocketId);
+      peerConnection.close();
+      this.peerConnections.delete(targetSocketId);
+      peerConnection = undefined;
+    }
+
+    if (!peerConnection) {
+      peerConnection = this.createPeerConnection(targetSocketId, onRemoteStream);
+    }
 
     try {
+      this.activeNegotiations.add(targetSocketId);
       const offer = await peerConnection.createOffer();
       // Optimize Opus codec only on initial connection
       const optimizedOffer = this.optimizeOpusSDP(offer);
@@ -414,6 +440,8 @@ export class WebRTCService {
     } catch (error) {
       console.error('Error creating offer:', error);
       throw error;
+    } finally {
+      this.activeNegotiations.delete(targetSocketId);
     }
   }
 
@@ -451,6 +479,8 @@ export class WebRTCService {
     } catch (error) {
       console.error('Error handling offer:', error);
       throw error;
+    } finally {
+      this.activeNegotiations.delete(senderSocketId);
     }
   }
 
@@ -472,6 +502,8 @@ export class WebRTCService {
       } catch (error) {
         console.error('Error handling answer:', error);
         throw error;
+      } finally {
+        this.activeNegotiations.delete(senderSocketId);
       }
     } else {
       console.warn('No peer connection found for:', senderSocketId);
@@ -617,6 +649,9 @@ export class WebRTCService {
     
     // Clear reconnect attempts
     this.reconnectAttempts.delete(socketId);
+
+    // Clear negotiation state
+    this.activeNegotiations.delete(socketId);
     
     // Clear initial connection tracking
     this.initialConnectionsComplete.delete(socketId);

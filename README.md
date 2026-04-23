@@ -165,6 +165,49 @@ npm run build
 npx wrangler pages deploy dist --project-name=talky
 ```
 
+### One-Command Quick Tunnel + GitHub Pages Deploy
+
+Use this script to automate all of the following in one run:
+- Start a new Cloudflare Quick Tunnel
+- Capture the temporary trycloudflare.com URL
+- Create or update `~/.cloudflared/config.yml`
+- Update `frontend/.env.production` (`VITE_API_URL`, `VITE_WS_URL`)
+- Build frontend and deploy to GitHub Pages
+
+Important:
+- GitHub Pages must be available for this repository.
+- On free GitHub plans, this usually means the repository must be **public**.
+- Private repository Pages may require a paid plan.
+
+How to run:
+
+```bash
+# 1) Go to project root
+cd /Users/kishan/Projects/Personal\ Work/talky
+
+# 2) Make script executable (run once)
+chmod +x scripts/deploy-fe.sh
+
+# 3) Run the script
+./scripts/deploy-fe.sh
+```
+
+Alternative (if you do not want to use chmod):
+
+```bash
+bash scripts/deploy-fe.sh
+```
+
+```bash
+./scripts/deploy-fe.sh
+```
+
+If your backend runs on port `3100` instead of `3001`:
+
+```bash
+BACKEND_PORT=3100 ./scripts/deploy-fe.sh
+```
+
 ---
 
 ## Local Production Build

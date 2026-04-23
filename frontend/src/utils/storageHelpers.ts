@@ -7,6 +7,7 @@ export function clearAllTalkyStorage(): void {
   const localStorageKeys = [
     'talky_username',
     'talky_guestId',
+    'talky_user_id',
     'talky-direct-call',
     'talky-language',
   ];
@@ -30,6 +31,7 @@ export function debugStorage(): void {
   console.log('localStorage:');
   console.log('  talky_username:', localStorage.getItem('talky_username'));
   console.log('  talky_guestId:', localStorage.getItem('talky_guestId'));
+  console.log('  talky_user_id:', localStorage.getItem('talky_user_id'));
   console.log('  talky-direct-call:', localStorage.getItem('talky-direct-call'));
   console.log('  talky-language:', localStorage.getItem('talky-language'));
   

@@ -118,6 +118,7 @@ export const translations = {
     leaveMeetingQuestion: 'Leave Meeting?',
     areYouSureLeave: 'Are you sure you want to leave this meeting?',
     areYouSureLeavingCall: 'Are you sure you want to leave the call?',
+    cancelDirectCallQuestion: 'Cancel this direct call?',
     leave: 'Leave',
     
     // Chat Page
@@ -331,6 +332,7 @@ export const translations = {
     leaveMeetingQuestion: 'মিটিং ছেড়ে যাবেন?',
     areYouSureLeave: 'আপনি কি নিশ্চিত যে এই মিটিং ছেড়ে যেতে চান?',
     areYouSureLeavingCall: 'আপনি কি নিশ্চিত যে কল ছেড়ে যেতে চান?',
+    cancelDirectCallQuestion: 'আপনি কি এই ডাইরেক্ট কলটি বাতিল করতে চান?',
     leave: 'ছেড়ে দিন',
     
     // Chat Page

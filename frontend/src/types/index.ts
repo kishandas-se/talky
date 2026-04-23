@@ -26,7 +26,7 @@ export interface Room {
 export interface Message {
   id: number;
   roomId: string;
-  userId: number;
+  userId: string;
   username: string;
   content: string;
   messageType: 'text' | 'system' | 'image' | 'video' | 'document';
@@ -36,7 +36,7 @@ export interface Message {
   fileType?: string;
   status: 'sent' | 'delivered' | 'read';
   createdAt: string;
-  readBy?: number[];
+  readBy?: string[];
   isOwn?: boolean;
 }
 
@@ -49,7 +49,7 @@ export interface PeerConnection {
 
 // Participant types
 export interface Participant {
-  userId: number;
+  userId: string;
   username: string;
   socketId: string;
   joinedAt: string;

@@ -4,7 +4,7 @@ import { Message, MessageReadReceipt } from '../types';
 export class MessageModel {
   static create(
     roomId: string, 
-    userId: number, 
+    userId: string, 
     username: string, 
     content: string, 
     messageType: 'text' | 'system' | 'image' | 'video' | 'document' = 'text',
@@ -71,7 +71,7 @@ export class MessageModel {
     return result.changes > 0;
   }
 
-  static markAsRead(messageId: number, userId: number): boolean {
+  static markAsRead(messageId: number, userId: string): boolean {
     try {
       // Add read receipt
       db.prepare(
@@ -96,7 +96,7 @@ export class MessageModel {
     }
   }
 
-  static getReadBy(messageId: number): number[] {
+  static getReadBy(messageId: number): string[] {
     const receipts = db.prepare(
       'SELECT user_id FROM message_read_receipts WHERE message_id = ?'
     ).all(messageId) as MessageReadReceipt[];

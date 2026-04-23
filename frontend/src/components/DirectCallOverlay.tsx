@@ -110,6 +110,8 @@ export default function DirectCallOverlay() {
 
   const handleReject = () => {
     if (!socket || !invitationId) return;
+    if (!window.confirm(t.cancelDirectCallQuestion)) return;
+
     socket.emit('call:reject', { invitationId });
     setStatus('ended');
     setTimeout(reset, 500);
@@ -117,6 +119,8 @@ export default function DirectCallOverlay() {
 
   const handleCancel = () => {
     if (!socket || !invitationId) return;
+    if (!window.confirm(t.cancelDirectCallQuestion)) return;
+
     socket.emit('call:cancel', { invitationId });
     setStatus('ended');
     setTimeout(reset, 500);

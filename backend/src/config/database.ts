@@ -45,7 +45,8 @@ export function initializeDatabase() {
     )
   `);
 
-  // Messages table - Supports both authenticated and guest users
+  // Messages table - Supports both authenticated and guest users.
+  // SQLite stores dynamic types, so user_id can hold persistent UUID strings.
   db.exec(`
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,7 +64,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // Message read receipts - Supports guest users
+  // Message read receipts - Supports guest users and persistent UUID strings.
   db.exec(`
     CREATE TABLE IF NOT EXISTS message_read_receipts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

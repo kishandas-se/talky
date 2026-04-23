@@ -30,9 +30,11 @@ import { useDirectCallStore } from '../stores/directCallStore';
 import { useLanguageStore } from '../stores/languageStore';
 import { translations } from '../i18n/translations';
 import { translateEnglishToBengali } from '../services/translator';
+import { appendUniqueMessage, dedupeMessages } from '../utils/chatMessages';
+import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
 
 interface Participant {
-  userId: number;
+  userId: string;
   username: string;
   socketId: string;
   joinedAt: string;
@@ -41,7 +43,7 @@ interface Participant {
 interface Message {
   id: number;
   roomId?: string;
-  userId?: number;
+  userId?: string;
   username: string;
   content: string;
   messageType?: 'text' | 'system' | 'image' | 'video' | 'document';
@@ -78,6 +80,7 @@ export default function CallRoom() {
   const [isLocalVideoMinimized, setIsLocalVideoMinimized] = useState(false);
   const [videoQuality, setVideoQuality] = useState<VideoQuality>('low');
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Use registered username from global store
@@ -90,11 +93,9 @@ export default function CallRoom() {
   });
   
   const [guestId] = useState(() => {
-    // Generate unique ID per browser tab for call room
-    // This ensures each tab is a unique participant
-    const numericId = Date.now() + Math.floor(Math.random() * 1000);
-    console.log('🆕 CallRoom - Generated unique tab guestId:', numericId);
-    return numericId;
+    const stableUserId = getOrCreateUserId();
+    console.log('🆔 CallRoom - Using persistent guestId:', stableUserId);
+    return stableUserId;
   });
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -104,6 +105,7 @@ export default function CallRoom() {
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasJoinedRoom = useRef(false); // Prevent duplicate joins
+  const allowLeaveRef = useRef(false);
 
   useEffect(() => {
     if (!roomId) {
@@ -276,12 +278,12 @@ export default function CallRoom() {
       console.log('📜 Chat history received:', loadedMessages.length, 'messages');
       const formattedMessages = loadedMessages.map((msg: any) => {
         // Normalize for comparison to handle type mismatches
-        const msgUserId = Number(msg.user_id);
-        const currentUserId = Number(guestId);
+        const msgUserId = normalizeUserId(msg.user_id);
+        const currentUserId = normalizeUserId(guestId);
         const normalizedMsgUsername = (msg.username || '').trim().toLowerCase();
         const normalizedGuestName = (guestName || '').trim().toLowerCase();
-        
-        const userIdMatches = !isNaN(msgUserId) && !isNaN(currentUserId) && msgUserId === currentUserId;
+
+        const userIdMatches = msgUserId !== '' && msgUserId === currentUserId;
         const usernameMatches = normalizedMsgUsername === normalizedGuestName;
         const isOwn = userIdMatches || usernameMatches;
         
@@ -302,7 +304,7 @@ export default function CallRoom() {
           isOwn
         };
       });
-      setMessages(formattedMessages);
+      setMessages(dedupeMessages(formattedMessages));
       console.log('✅ Loaded', formattedMessages.length, 'messages into state');
     });
 
@@ -310,12 +312,12 @@ export default function CallRoom() {
       console.log('💬 New message received:', message.content);
       
       // Normalize for comparison to handle type mismatches
-      const msgUserId = Number(message.userId);
-      const currentUserId = Number(guestId);
+      const msgUserId = normalizeUserId(message.userId);
+      const currentUserId = normalizeUserId(guestId);
       const normalizedMsgUsername = (message.username || '').trim().toLowerCase();
       const normalizedGuestName = (guestName || '').trim().toLowerCase();
-      
-      const userIdMatches = !isNaN(msgUserId) && !isNaN(currentUserId) && msgUserId === currentUserId;
+
+      const userIdMatches = msgUserId !== '' && msgUserId === currentUserId;
       const usernameMatches = normalizedMsgUsername === normalizedGuestName;
       const isOwn = userIdMatches || usernameMatches;
       
@@ -335,7 +337,7 @@ export default function CallRoom() {
         readBy: message.readBy || [],
         isOwn
       };
-      setMessages(prev => [...prev, newMsg]);
+      setMessages(prev => appendUniqueMessage(prev, newMsg));
       console.log('✅ Message added to state, isOwn:', isOwn);
     });
 
@@ -401,14 +403,32 @@ export default function CallRoom() {
   // Prevent accidental back button / page close
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (allowLeaveRef.current) {
+        return undefined;
+      }
+
       e.preventDefault();
       e.returnValue = t.areYouSureLeavingCall;
       return t.areYouSureLeavingCall;
     };
 
+    const handlePopState = () => {
+      if (allowLeaveRef.current) {
+        return;
+      }
+
+      setShowLeaveConfirm(true);
+      window.history.pushState({ roomId }, '', window.location.href);
+    };
+
+    window.history.pushState({ roomId }, '', window.location.href);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [t]);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [roomId, t]);
 
   // Keep wake lock to prevent phone sleep during call (if supported)
   useEffect(() => {
@@ -509,6 +529,13 @@ export default function CallRoom() {
   }, [showChat, messages, roomId, guestId]);
 
   const handleLeaveCall = () => {
+    setShowLeaveConfirm(true);
+  };
+
+  const confirmLeaveCall = () => {
+    allowLeaveRef.current = true;
+    setShowLeaveConfirm(false);
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
     }
@@ -1351,6 +1378,30 @@ export default function CallRoom() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 z-50">
+          <div className="bg-white rounded-xl w-full max-w-sm p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{t.leaveCall}</h3>
+            <p className="text-sm text-gray-600 mb-6">{t.areYouSureLeavingCall}</p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={confirmLeaveCall}
+                className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
+              >
+                {t.leave}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

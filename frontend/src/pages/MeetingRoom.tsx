@@ -26,13 +26,15 @@ import { useDirectCallStore } from '../stores/directCallStore';
 import { useLanguageStore } from '../stores/languageStore';
 import { translations } from '../i18n/translations';
 import { translateEnglishToBengali } from '../services/translator';
+import { appendUniqueMessage, dedupeMessages } from '../utils/chatMessages';
+import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
 
 // Default meeting room constants
 const DEFAULT_ROOM_ID = 'talky-meeting';
 const DEFAULT_ROOM_NAME = 'Talky Meeting';
 
 interface Participant {
-  userId: number;
+  userId: string;
   username: string;
   socketId: string;
   joinedAt: string;
@@ -62,7 +64,7 @@ export default function MeetingRoom() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
-  const [userId, setUserId] = useState<number>(0);
+  const [userId, setUserId] = useState<string>('');
   const [videoQuality, setVideoQuality] = useState<VideoQuality>('low'); // Default to low for rural optimization
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('excellent');
   
@@ -73,6 +75,7 @@ export default function MeetingRoom() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const cleanupFnsRef = useRef<Array<() => void>>([]);
   const participantsRef = useRef<Participant[]>([]);
+  const allowLeaveRef = useRef(false);
 
   // Keep participants ref in sync with state
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function MeetingRoom() {
   useEffect(() => {
     // Generate a unique user ID for this tab/window (not stored in sessionStorage)
     // This ensures each browser tab is treated as a separate user
-    const uniqueUserId = Date.now() + Math.floor(Math.random() * 10000);
+    const uniqueUserId = getOrCreateUserId();
     
     // Use registered username from global store
     const userName = currentUsername || 'Guest User';
@@ -285,18 +288,10 @@ export default function MeetingRoom() {
           // Filter out yourself from the participants list
           const otherParticipants = participantsList.filter(p => p.userId !== uniqueUserId);
           setParticipants(otherParticipants);
-          
-          // Small delay to ensure remote peer handlers are ready
-          setTimeout(() => {
-            // Create WebRTC offers for existing participants
-            otherParticipants.forEach((participant) => {
-              console.log('📞 Creating offer for existing participant:', participant.username);
-              webrtcServiceRef.current.createOffer(
-                participant.socketId,
-                (remoteStream) => setRemoteVideoStream(participant.socketId, remoteStream)
-              ).catch((err) => console.error('Error creating offer:', err));
-            });
-          }, 100); // 100ms delay to ensure handlers are ready
+
+          // Existing participants already create offers on user-joined.
+          // Waiting here avoids both sides offering at once.
+          console.log('🕒 Waiting for existing participants to initiate WebRTC offers');
         });
 
         socket.on('user-joined', (participant: Participant) => {
@@ -352,9 +347,9 @@ export default function MeetingRoom() {
               const normalizedUserName = (userName || '').trim().toLowerCase();
               const usernameMatches = normalizedMsgUsername === normalizedUserName;
               
-              const msgUserId = Number(msg.user_id);
-              const currentUserId = Number(uniqueUserId);
-              const userIdMatches = !isNaN(msgUserId) && !isNaN(currentUserId) && msgUserId === currentUserId;
+              const msgUserId = normalizeUserId(msg.user_id);
+              const currentUserId = normalizeUserId(uniqueUserId);
+              const userIdMatches = msgUserId !== '' && msgUserId === currentUserId;
               
               const isOwn = userIdMatches || usernameMatches;
               
@@ -378,7 +373,7 @@ export default function MeetingRoom() {
                 isOwn
               };
             });
-            setMessages(formattedMessages);
+            setMessages(dedupeMessages(formattedMessages));
           }
         });
 
@@ -390,17 +385,17 @@ export default function MeetingRoom() {
           const normalizedUserName = (userName || '').trim().toLowerCase();
           const usernameMatches = normalizedMsgUsername === normalizedUserName;
           
-          const msgUserId = Number(message.userId);
-          const currentUserId = Number(uniqueUserId);
-          const userIdMatches = !isNaN(msgUserId) && !isNaN(currentUserId) && msgUserId === currentUserId;
+          const msgUserId = normalizeUserId(message.userId);
+          const currentUserId = normalizeUserId(uniqueUserId);
+          const userIdMatches = msgUserId !== '' && msgUserId === currentUserId;
           
-          setMessages(prev => [...prev, {
+          setMessages(prev => appendUniqueMessage(prev, {
             id: message.id || Date.now(),
             username: message.username,
             content: message.content,
             createdAt: message.createdAt,
             isOwn: userIdMatches || usernameMatches
-          }]);
+          }));
         });
 
         // Join room via socket with unique user info
@@ -472,12 +467,44 @@ export default function MeetingRoom() {
     };
   }, [currentUsername]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (allowLeaveRef.current) {
+        return undefined;
+      }
+
+      event.preventDefault();
+      event.returnValue = t.areYouSureLeave;
+      return t.areYouSureLeave;
+    };
+
+    const handlePopState = () => {
+      if (allowLeaveRef.current) {
+        return;
+      }
+
+      setShowLeaveConfirm(true);
+      window.history.pushState({ room: DEFAULT_ROOM_ID }, '', window.location.href);
+    };
+
+    window.history.pushState({ room: DEFAULT_ROOM_ID }, '', window.location.href);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [t.areYouSureLeave]);
+
   const handleLeaveCall = () => {
     setShowLeaveConfirm(true);
   };
 
   const confirmLeave = useCallback(() => {
     console.log('🚪 Leaving meeting...');
+    allowLeaveRef.current = true;
+    setShowLeaveConfirm(false);
     
     // Stop all local media tracks
     if (localStreamRef.current) {
@@ -667,7 +694,7 @@ export default function MeetingRoom() {
         <div className="flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <button
-              onClick={() => navigate('/')}
+              onClick={handleLeaveCall}
               className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-all flex-shrink-0"
               title={t.backToHome}
             >

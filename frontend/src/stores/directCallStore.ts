@@ -13,7 +13,7 @@ export type DirectCallType = 'audio' | 'video';
 
 export interface OnlineUser {
   username: string;
-  userId: number;
+  userId: string;
   socketId: string;
 }
 
@@ -30,12 +30,12 @@ interface DirectCallState {
   
   // Current user info (auto-assigned by server)
   currentUsername: string | null;
-  currentUserId: number | null;
+  currentUserId: string | null;
   
   // Online users list
   onlineUsers: OnlineUser[];
 
-  setCurrentUser: (username: string, userId: number) => void;
+  setCurrentUser: (username: string, userId: string) => void;
   setOnlineUsers: (users: OnlineUser[]) => void;
 
   setOutgoing: (payload: {

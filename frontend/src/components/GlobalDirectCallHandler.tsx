@@ -6,6 +6,7 @@ import { setupPushNotifications } from '../services/push';
 import { useDirectCallStore } from '../stores/directCallStore';
 import { useLanguageStore } from '../stores/languageStore';
 import { translations } from '../i18n/translations';
+import { getOrCreateUserId } from '../utils/userIdentity';
 
 interface IncomingCallPayload {
   invitationId: string;
@@ -25,7 +26,7 @@ interface AcceptedPayload {
 
 export interface OnlineUser {
   username: string;
-  userId: number;
+  userId: string;
   socketId: string;
 }
 
@@ -64,17 +65,21 @@ export default function GlobalDirectCallHandler() {
       const storedUsername = localStorage.getItem('talky_username');
       if (storedUsername && !registrationAttempted.current) {
         registrationAttempted.current = true;
-        socket.emit('direct:register', { username: storedUsername });
+        socket.emit('direct:register', {
+          username: storedUsername,
+          clientUserId: getOrCreateUserId(),
+        });
       }
     };
 
     // Handle successful registration
-    socket.on('direct:registered', ({ username, userId }: { username: string; userId: number }) => {
+    socket.on('direct:registered', ({ username, userId }: { username: string; userId: string }) => {
       console.log(`✅ Registered: ${username} (userId: ${userId})`);
       setCurrentUser(username, userId);
       sessionStorage.setItem('guestName', username);
       sessionStorage.setItem('guestId', String(userId));
       localStorage.setItem('talky_username', username);
+      localStorage.setItem('talky_user_id', userId);
       
       // Setup push notifications if not already done
       if (!pushSetupDone.current) {

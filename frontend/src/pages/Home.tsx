@@ -9,6 +9,7 @@ import { translations } from '../i18n/translations';
 import NameEntryModal from '../components/NameEntryModal';
 import UserDropdown from '../components/UserDropdown';
 import InstallPrompt from '../components/InstallPrompt';
+import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -40,8 +41,7 @@ export default function Home() {
   // Use strict comparison and ensure both values exist to avoid type mismatches
   const availableUsers = onlineUsers.filter(user => {
     if (!currentUserId) return true; // Show all if currentUserId not set yet
-    // Ensure both are compared as numbers
-    return Number(user.userId) !== Number(currentUserId);
+    return normalizeUserId(user.userId) !== normalizeUserId(currentUserId);
   });
   
   // Debug logging to track filtering
@@ -86,7 +86,10 @@ export default function Home() {
     // If username exists in session but not in store, re-register
     if (activeUsername && !currentUsername) {
       const socket = initializeSocket();
-      socket.emit('direct:register', { username: activeUsername });
+      socket.emit('direct:register', {
+        username: activeUsername,
+        clientUserId: getOrCreateUserId(),
+      });
     }
   }, [currentUsername]);
 
@@ -102,7 +105,10 @@ export default function Home() {
     localStorage.setItem('talky_username', name);
     
     // Register with backend
-    socket.emit('direct:register', { username: name });
+    socket.emit('direct:register', {
+      username: name,
+      clientUserId: getOrCreateUserId(),
+    });
     
     setShowNameModal(false);
     toast.success(`👋 ${t.welcome}, ${name}!`);

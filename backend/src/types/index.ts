@@ -28,7 +28,7 @@ export interface MeetingRoom {
 export interface Message {
   id: number;
   room_id: string;
-  user_id: number;
+  user_id: string;
   username: string;
   content: string;
   message_type: 'text' | 'system' | 'image' | 'video' | 'document';
@@ -38,13 +38,13 @@ export interface Message {
   file_type?: string;
   status: 'sent' | 'delivered' | 'read';
   created_at: string;
-  read_by?: number[]; // Array of user IDs who have read the message
+  read_by?: string[]; // Array of user IDs who have read the message
 }
 
 export interface MessageReadReceipt {
   id: number;
   message_id: number;
-  user_id: number;
+  user_id: string;
   read_at: string;
 }
 
@@ -63,31 +63,31 @@ export interface CallHistory {
 export interface SignalingOffer {
   roomId: string;
   offer: any; // RTCSessionDescriptionInit is browser-only
-  userId: number;
+  userId: string;
 }
 
 export interface SignalingAnswer {
   roomId: string;
   answer: any; // RTCSessionDescriptionInit is browser-only
-  userId: number;
+  userId: string;
 }
 
 export interface IceCandidate {
   roomId: string;
   candidate: any; // RTCIceCandidateInit is browser-only
-  userId: number;
+  userId: string;
 }
 
 export interface ChatMessage {
   roomId: string;
   content: string;
-  userId: number;
+  userId: string;
   username: string;
   timestamp: string;
 }
 
 export interface RoomParticipant {
-  userId: number;
+  userId: string;
   username: string;
   socketId: string;
   joinedAt: string;
