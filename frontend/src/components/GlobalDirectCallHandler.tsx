@@ -60,8 +60,8 @@ export default function GlobalDirectCallHandler() {
   useEffect(() => {
     const socket = initializeSocket();
 
-    // Attempt to register with stored username
-    const attemptRegistration = () => {
+    // Attempt to register with stored username. Returns true if registration was emitted.
+    const attemptRegistration = (): boolean => {
       const storedUsername = localStorage.getItem('talky_username');
       if (storedUsername && !registrationAttempted.current) {
         registrationAttempted.current = true;
@@ -69,7 +69,9 @@ export default function GlobalDirectCallHandler() {
           username: storedUsername,
           clientUserId: getOrCreateUserId(),
         });
+        return true;
       }
+      return false;
     };
 
     // Handle successful registration
@@ -99,14 +101,28 @@ export default function GlobalDirectCallHandler() {
       setOnlineUsers(users);
     });
 
-    // Attempt registration on connection
+    // Reset registration flag on disconnect so reconnect triggers fresh registration
+    const handleDisconnect = () => {
+      registrationAttempted.current = false;
+    };
+    socket.on('disconnect', handleDisconnect);
+
+    // Attempt registration on (re)connection
+    const handleConnect = () => {
+      if (!attemptRegistration()) {
+        // Already registered (very fast reconnect before disconnect handler fired)
+        socket.emit('users:get');
+      }
+    };
+
     if (socket.connected) {
-      attemptRegistration();
+      if (!attemptRegistration()) {
+        // Already registered (e.g. fast reconnect) — just refresh the online users list
+        socket.emit('users:get');
+      }
     }
 
-    socket.on('connect', () => {
-      attemptRegistration();
-    });
+    socket.on('connect', handleConnect);
 
     socket.on('call:incoming', (payload: IncomingCallPayload) => {
       setIncoming(payload);
@@ -194,7 +210,8 @@ export default function GlobalDirectCallHandler() {
     navigator.serviceWorker?.addEventListener('message', swMessageHandler);
 
     return () => {
-      socket.off('connect');
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
       socket.off('direct:registered');
       socket.off('users:online');
       socket.off('call:incoming');

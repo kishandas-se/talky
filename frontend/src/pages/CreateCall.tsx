@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VideoCameraIcon, DocumentDuplicateIcon, PhoneIcon, UserIcon, ArrowRightIcon, CheckIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { getAppUrl } from '../utils/urlHelpers';
 
 export default function CreateCall() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function CreateCall() {
       return;
     }
 
-    const callLink = `${window.location.origin}/call/${callId}`;
+    const callLink = getAppUrl(`/call/${callId}`);
     navigator.clipboard.writeText(callLink);
     setCopied(true);
     toast.success('Call link copied! Share it with the other person.');
@@ -155,7 +156,7 @@ export default function CreateCall() {
                 </label>
                 <div className="flex items-center space-x-3">
                   <div className="flex-1 bg-white px-4 py-3 rounded-lg border border-gray-200 font-mono text-sm break-all">
-                    {`${window.location.origin}/call/${callId}`}
+                    {getAppUrl(`/call/${callId}`)}
                   </div>
                   <button
                     onClick={copyCallLink}

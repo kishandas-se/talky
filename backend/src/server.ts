@@ -27,13 +27,34 @@ const httpServer = createServer(app);
 // Get allowed origins from environment
 const getAllowedOrigins = (): (string | RegExp)[] => {
   const origins: (string | RegExp)[] = [
-    'http://localhost:5173', 
-    'https://your-app.pages.dev',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://localhost:5173',
+    'https://127.0.0.1:5173',
+    'https://kishandas-se.github.io',
   ];
+
+  const normalizeOrigin = (value: string): string => {
+    try {
+      // If user provides a full URL with path (e.g. https://host/talky/), keep only the origin.
+      return new URL(value).origin;
+    } catch {
+      return value.trim();
+    }
+  };
   
   // Add production frontend URL if set
   if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL);
+    origins.push(normalizeOrigin(process.env.FRONTEND_URL));
+  }
+
+  // Optional comma-separated list for additional allowed frontend origins
+  if (process.env.FRONTEND_URLS) {
+    const extraOrigins = process.env.FRONTEND_URLS
+      .split(',')
+      .map((value) => normalizeOrigin(value))
+      .filter(Boolean);
+    origins.push(...extraOrigins);
   }
   
   // Add ngrok patterns for development

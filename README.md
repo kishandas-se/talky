@@ -165,14 +165,15 @@ npm run build
 npx wrangler pages deploy dist --project-name=talky
 ```
 
-### One-Command Quick Tunnel + GitHub Pages Deploy
+### One-Command Ngrok Tunnel + GitHub Pages Deploy
 
 Use this script to automate all of the following in one run:
-- Start a new Cloudflare Quick Tunnel
-- Capture the temporary trycloudflare.com URL
-- Create or update `~/.cloudflared/config.yml`
+- Start a new ngrok tunnel for backend
+- Capture the temporary ngrok public URL
+- Create or update `~/.talky-tunnel/state.yml`
 - Update `frontend/.env.production` (`VITE_API_URL`, `VITE_WS_URL`)
 - Build frontend and deploy to GitHub Pages
+- Sync `backend/.env` `FRONTEND_URL` to GitHub Pages origin
 
 Important:
 - GitHub Pages must be available for this repository.
@@ -187,6 +188,10 @@ cd /Users/kishan/Projects/Personal\ Work/talky
 
 # 2) Make script executable (run once)
 chmod +x scripts/deploy-fe.sh
+
+# 2.1) Make sure ngrok is installed and authenticated
+# brew install ngrok/ngrok/ngrok
+ngrok config add-authtoken <your_ngrok_token>
 
 # 3) Run the script
 ./scripts/deploy-fe.sh
@@ -207,6 +212,29 @@ If your backend runs on port `3100` instead of `3001`:
 ```bash
 BACKEND_PORT=3100 ./scripts/deploy-fe.sh
 ```
+
+### Auto-Run On Reboot/Login (macOS)
+
+Yes, this is possible. Use the LaunchAgent helper script:
+
+```bash
+chmod +x scripts/setup-autostart-macos.sh
+bash scripts/setup-autostart-macos.sh install
+```
+
+Useful commands:
+
+```bash
+# Check status
+bash scripts/setup-autostart-macos.sh status
+
+# Disable auto-run
+bash scripts/setup-autostart-macos.sh uninstall
+```
+
+Note:
+- On macOS, this runs automatically when your user logs in after reboot.
+- Free ngrok URLs can change after restart, so this auto-run re-deploy is useful to keep frontend/backend endpoint in sync.
 
 ---
 

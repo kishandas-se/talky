@@ -32,6 +32,7 @@ import { translations } from '../i18n/translations';
 import { translateEnglishToBengali } from '../services/translator';
 import { appendUniqueMessage, dedupeMessages } from '../utils/chatMessages';
 import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
+import { getAppUrl } from '../utils/urlHelpers';
 
 interface Participant {
   userId: string;
@@ -354,6 +355,16 @@ export default function CallRoom() {
       ));
     });
 
+    // Re-join room on socket reconnect (e.g. after mobile network drop)
+    const handleSocketReconnect = () => {
+      if (hasJoinedRoom.current) {
+        console.log('🔄 Socket reconnected in CallRoom, re-joining room:', roomId);
+        socket.emit('join-room', { roomId, userId: guestId, username: guestName });
+        socket.emit('chat:join', { roomId, userId: guestId, username: guestName });
+      }
+    };
+    socket.on('connect', handleSocketReconnect);
+
     // Initialize media
     initializeMedia();
 
@@ -373,6 +384,7 @@ export default function CallRoom() {
       socket.off('chat:message');
       socket.off('chat:error');
       socket.off('chat:status');
+      socket.off('connect', handleSocketReconnect);
     };
   }, [roomId, navigate, guestName]);
 
@@ -702,7 +714,7 @@ export default function CallRoom() {
   };
 
   const copyRoomLink = () => {
-    const link = `${window.location.origin}/call/${roomId}`;
+    const link = getAppUrl(`/call/${roomId}`);
     navigator.clipboard.writeText(link);
     toast.success(`📋 ${t.roomLinkCopied}`);
   };

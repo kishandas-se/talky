@@ -28,6 +28,7 @@ import { translations } from '../i18n/translations';
 import { translateEnglishToBengali } from '../services/translator';
 import { appendUniqueMessage, dedupeMessages } from '../utils/chatMessages';
 import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
+import { getAppUrl } from '../utils/urlHelpers';
 
 // Default meeting room constants
 const DEFAULT_ROOM_ID = 'talky-meeting';
@@ -424,11 +425,22 @@ export default function MeetingRoom() {
     // Initialize media
     initializeMedia();
 
+    // Re-join room on socket reconnect (e.g. after mobile network drop)
+    const handleSocketReconnect = () => {
+      if (localStreamRef.current) {
+        console.log('🔄 Socket reconnected in MeetingRoom, re-joining room');
+        socket.emit('join-room', { roomId: DEFAULT_ROOM_ID, userId: uniqueUserId, username: userName });
+        socket.emit('chat:join', { roomId: DEFAULT_ROOM_ID, userId: uniqueUserId, username: userName });
+      }
+    };
+    socket.on('connect', handleSocketReconnect);
+
     // Cleanup
     return () => {
       console.log('🧹 Cleaning up MeetingRoom component');
       
       socket.emit('leave-room', { roomId: DEFAULT_ROOM_ID });
+      socket.off('connect', handleSocketReconnect);
       
       // Stop all local media tracks
       if (localStreamRef.current) {
@@ -636,7 +648,7 @@ export default function MeetingRoom() {
   }, [isScreenSharing]);
 
   const copyRoomLink = () => {
-    const link = `${window.location.origin}/meeting/${DEFAULT_ROOM_ID}`;
+    const link = getAppUrl(`/meeting/${DEFAULT_ROOM_ID}`);
     navigator.clipboard.writeText(link);
     toast.success(t.roomLinkCopied);
   };

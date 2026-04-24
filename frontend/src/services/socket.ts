@@ -12,15 +12,19 @@ export const initializeSocket = (): Socket => {
       path: '/socket.io',
       transports: ['websocket', 'polling'], // Fallback to polling for poor networks
       reconnection: true,
-      reconnectionAttempts: 10,           // More attempts (vs 5) for unstable networks
-      reconnectionDelay: 1000,            // Start with 1s delay
-      reconnectionDelayMax: 10000,        // Up to 10s between attempts (vs default 5s)
-      timeout: 20000,                     // 20s connection timeout (vs default 20s) - Good for high latency
+      reconnectionAttempts: Infinity,     // Keep trying on unstable links
+      reconnectionDelay: 1500,            // Start with 1.5s delay
+      reconnectionDelayMax: 15000,        // Up to 15s between attempts
+      timeout: 30000,                     // 30s connection timeout for high-latency rural networks
       autoConnect: true,
       upgrade: true,                      // Allow upgrading from polling to WebSocket
-      rememberUpgrade: true,              // Remember successful WebSocket upgrade
+      rememberUpgrade: false,             // Retry from polling first to avoid sticky failed websocket state
       // Better buffering for offline scenarios
       withCredentials: true,
+      // Bypass ngrok free-tier browser interstitial page on polling requests
+      extraHeaders: {
+        'ngrok-skip-browser-warning': '1',
+      },
     });
 
     socket.on('connect', () => {

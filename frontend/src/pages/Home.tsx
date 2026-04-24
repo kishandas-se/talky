@@ -10,6 +10,7 @@ import NameEntryModal from '../components/NameEntryModal';
 import UserDropdown from '../components/UserDropdown';
 import InstallPrompt from '../components/InstallPrompt';
 import { getOrCreateUserId, normalizeUserId } from '../utils/userIdentity';
+import { getAppUrl } from '../utils/urlHelpers';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -122,7 +123,7 @@ export default function Home() {
 
     // Generate call ID
     const callId = crypto.randomUUID().split('-')[0];
-    const callLink = `${window.location.origin}/call/${callId}`;
+    const callLink = getAppUrl(`/call/${callId}`);
     
     // Store user info
     sessionStorage.setItem('guestName', currentUsername);
